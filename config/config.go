@@ -17,7 +17,6 @@ func LoadConfig() Config {
 		log.Fatal("Erreur de chargement du fichier .env")
 	}
 	return Config{
-		Token:   os.Getenv("DISCORD_TOKEN"),
-		GuildID: os.Getenv("GUILD_ID"),
+		Token: os.Getenv("DISCORD_TOKEN"),
 	}
 }
