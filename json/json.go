@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-type Stockpile struct {
+type Stockpiles struct {
 	Nom      string `json:"nom"`
 	Hexa     string `json:"hexa"`
 	Code     string `json:"code"`
@@ -15,14 +15,14 @@ type Stockpile struct {
 }
 
 type ServerStockpiles struct {
-	GuildID    string      `json:"guild_id"`
-	Stockpiles []Stockpile `json:"stockpiles"`
+	GuildID    string       `json:"guild_id"`
+	Stockpiles []Stockpiles `json:"stockpiles"`
 }
 
 const filename = "stockpiles.json"
 
 // Récupérer les stockpiles d'une guilde
-func GetStockpiles(guildID string) ([]Stockpile, error) {
+func GetStockpiles(guildID string) ([]Stockpiles, error) {
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
 		return nil, errors.New("fichier stockpiles.json introuvable")
 	}
@@ -64,7 +64,7 @@ func AddStockpile(guildID, nom, hexa, code string, cooldown int64) error {
 	var found bool
 	for i, server := range serverStockpiles {
 		if server.GuildID == guildID {
-			serverStockpiles[i].Stockpiles = append(serverStockpiles[i].Stockpiles, Stockpile{
+			serverStockpiles[i].Stockpiles = append(serverStockpiles[i].Stockpiles, Stockpiles{
 				Nom:      nom,
 				Hexa:     hexa,
 				Code:     code,
@@ -79,7 +79,7 @@ func AddStockpile(guildID, nom, hexa, code string, cooldown int64) error {
 	if !found {
 		serverStockpiles = append(serverStockpiles, ServerStockpiles{
 			GuildID: guildID,
-			Stockpiles: []Stockpile{
+			Stockpiles: []Stockpiles{
 				{
 					Nom:      nom,
 					Hexa:     hexa,
@@ -99,7 +99,7 @@ func AddStockpile(guildID, nom, hexa, code string, cooldown int64) error {
 }
 
 // Sauvegarde les stockpiles mis à jour
-func SaveStockpiles(guildID string, stockpiles []Stockpile) error {
+func SaveStockpiles(guildID string, stockpiles []Stockpiles) error {
 	// Charger les données existantes
 	var allStockpiles []ServerStockpiles
 	data, err := os.ReadFile(filename)

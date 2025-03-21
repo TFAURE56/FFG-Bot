@@ -84,7 +84,7 @@ func removeStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 		return
 	}
 
-	var newStockpiles []json.Stockpile
+	var newStockpiles []json.Stockpiles
 	found := false
 
 	for _, sp := range stockpiles {
