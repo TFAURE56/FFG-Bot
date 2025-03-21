@@ -4,7 +4,6 @@ import (
 	"FFG-Bot/json"
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
@@ -37,7 +36,7 @@ func checkStockpileCooldowns(s *discordgo.Session) {
 		}
 
 		for _, sp := range stockpiles {
-			cooldownEnd, err := strconv.ParseInt(sp.Cooldown, 10, 64)
+			cooldownEnd := sp.Cooldown
 			if err != nil {
 				log.Printf("❌ Erreur conversion cooldown pour %s: %v", sp.Nom, err)
 				continue
@@ -55,7 +54,7 @@ func checkStockpileCooldowns(s *discordgo.Session) {
 func notifyCooldown(s *discordgo.Session, guildID string, sp json.Stockpiles, timeRemaining int64) {
 	channelID := "ID_DU_CHANNEL" // Remplace par l'ID du channel où envoyer l'alerte
 	message := fmt.Sprintf("⚠️ **Stockpile %s** dans **%s** sera bientôt prêt ! Temps restant : **%d minutes**.",
-		sp.Nom, sp.City, timeRemaining/60)
+		sp.Nom, sp.Hexa, timeRemaining/60)
 
 	_, err := s.ChannelMessageSend(channelID, message)
 	if err != nil {
