@@ -2,6 +2,8 @@ package bot
 
 import (
 	"FFG-Bot/bot/commands"
+	"FFG-Bot/bot/monitoring"
+
 	//"FFG-Bot/config"
 	"log"
 
@@ -38,6 +40,9 @@ func Start(token string) {
 			},
 		},
 	})
+
+	//Lancement du chek cooldown
+	monitoring.StartCooldownMonitor(s)
 
 	select {}
 }
