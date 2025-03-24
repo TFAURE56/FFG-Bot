@@ -84,6 +84,7 @@ func removeStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 		return
 	}
 
+	// Nouvelle liste de stockpiles sans celui qu'on veut supprimer
 	var newStockpiles []json.Stockpiles
 	found := false
 
@@ -114,7 +115,7 @@ func removeStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 				Content: "❌ Erreur lors de la suppression du stockpile.",
 			},
 		})
-		log.Printf("Erreur lors de la suppression du stockpile : %v", err)
+		log.Printf("❌ Erreur lors de la suppression du stockpile : %v", err)
 		return
 	}
 
