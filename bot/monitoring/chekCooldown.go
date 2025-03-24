@@ -10,10 +10,10 @@ import (
 )
 
 // Délai entre chaque vérification (ex : toutes les 10 minutes)
-const checkInterval = 10 * time.Minute
+const checkInterval = 30 * time.Second
 
 // Seuil du cooldown pour notification (ex: 1 heure avant expiration)
-const cooldownThreshold = 1 * time.Hour
+const cooldownThreshold = 49 * time.Hour
 
 func StartCooldownMonitor(s *discordgo.Session) {
 	go func() {
@@ -37,27 +37,31 @@ func checkStockpileCooldowns(s *discordgo.Session) {
 
 		for _, sp := range stockpiles {
 			cooldownEnd := sp.Cooldown
-			if err != nil {
-				log.Printf("❌ Erreur conversion cooldown pour %s: %v", sp.Nom, err)
-				continue
-			}
+			//			if err != nil {
+			//				log.Printf("❌ Erreur conversion cooldown pour %s: %v", sp.Nom, err)
+			//				continue
+			//			}
 
 			timeRemaining := cooldownEnd - now
 			if timeRemaining > 0 && timeRemaining < int64(cooldownThreshold.Seconds()) {
 				// 🚨 Cooldown bientôt terminé ! Envoyer une notification.
-				notifyCooldown(s, guild.ID, sp, timeRemaining)
+				alertCooldown(s, guild.ID, sp, timeRemaining)
 			}
 		}
 	}
 }
 
-func notifyCooldown(s *discordgo.Session, guildID string, sp json.Stockpiles, timeRemaining int64) {
-	channelID := "ID_DU_CHANNEL" // Remplace par l'ID du channel où envoyer l'alerte
-	message := fmt.Sprintf("⚠️ **Stockpile %s** dans **%s** sera bientôt prêt ! Temps restant : **%d minutes**.",
-		sp.Nom, sp.Hexa, timeRemaining/60)
+func alertCooldown(s *discordgo.Session, guildID string, sp json.Stockpiles, timeRemaining int64) {
+	channelID, exists := json.GetCooldownChannel(guildID)
+	if !exists {
+		log.Printf("⚠️ Aucun salon défini pour les alertes cooldown sur le serveur %s\n", guildID)
+		return
+	}
+
+	message := fmt.Sprintf("⚠️ **Alerte Cooldown** ⚠️\nLe stockpile **%s** situé à **%s** sera bientôt perdu. \n Temps restant : %d", sp.Nom, sp.Hexa, timeRemaining/60)
 
 	_, err := s.ChannelMessageSend(channelID, message)
 	if err != nil {
-		log.Printf("❌ Erreur envoi notification cooldown: %v", err)
+		log.Printf("❌ Erreur lors de l'envoi de l'alerte cooldown pour %s: %v\n", sp.Nom, err)
 	}
 }
