@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"sync"
 )
 
 type Stockpiles struct {
@@ -132,4 +133,50 @@ func SaveStockpiles(guildID string, stockpiles []Stockpiles) error {
 	}
 
 	return os.WriteFile(filename, jsonData, 0644)
+}
+
+// Structure pour stocker le salon des cooldowns par serveur
+type CooldownSettings struct {
+	sync.Mutex
+	GuildChannels map[string]string `json:"guild_channels"`
+}
+
+var cooldownData = CooldownSettings{GuildChannels: make(map[string]string)}
+
+const settingsFile = "settings.json"
+
+// Charge le fichier JSON au démarrage
+func LoadSettings() error {
+	file, err := os.Open(settingsFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewDecoder(file).Decode(&cooldownData)
+}
+
+// Sauvegarde un salon pour les cooldowns
+func SaveCooldownChannel(guildID, channelID string) error {
+	cooldownData.Lock()
+	defer cooldownData.Unlock()
+
+	cooldownData.GuildChannels[guildID] = channelID
+
+	file, err := os.Create(settingsFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	return json.NewEncoder(file).Encode(cooldownData)
+}
+
+// Récupère le salon des cooldowns d'un serveur
+func GetCooldownChannel(guildID string) (string, bool) {
+	cooldownData.Lock()
+	defer cooldownData.Unlock()
+
+	channel, exists := cooldownData.GuildChannels[guildID]
+	return channel, exists
 }

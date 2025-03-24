@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"FFG-Bot/bot/settings"
 	"log"
 
 	"github.com/bwmarrin/discordgo"
@@ -47,6 +48,8 @@ func RegisterAllCommands(s *discordgo.Session) {
 		RegisterResetStockpileCommand(s, guild.ID)
 		RegisterRemoveStockpileCommand(s, guild.ID)
 		RegisterHelpCommand(s, guild.ID)
+		settings.RegisterSetCooldownChannelCommand(s, guild.ID)
+
 	}
 
 	// Ajouter un seul handler global pour gérer toutes les commandes
