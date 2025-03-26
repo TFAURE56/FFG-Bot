@@ -10,10 +10,10 @@ import (
 )
 
 // Délai entre chaque vérification (ex : toutes les 10 minutes)
-const checkInterval = 30 * time.Second
+const checkInterval = 1 * time.Hour
 
 // Seuil du cooldown pour notification (ex: 1 heure avant expiration)
-const cooldownThreshold = 49 * time.Hour
+const cooldownThreshold = 12 * time.Hour
 
 func StartCooldownMonitor(s *discordgo.Session) {
 	go func() {
@@ -61,7 +61,7 @@ func alertCooldown(s *discordgo.Session, guildID string, sp json.Stockpiles, tim
 	hours := timeRemaining / 3600
 	minutes := (timeRemaining % 3600) / 60
 
-	message := fmt.Sprintf("⚠️ **Alerte Cooldown** ⚠️\nLe stockpile **%s** situé à **%s** sera bientôt perdu. \nTemps restant : %d heures et %d minutes", sp.Nom, sp.Hexa, hours, minutes)
+	message := fmt.Sprintf("# ⚠️ **Alerte Cooldown** ⚠️\n\nLe stockpile **%s** situé à **%s** sera bientôt perdu. \nTemps restant : %d heures et %d minutes", sp.Nom, sp.Hexa, hours, minutes)
 
 	_, err := s.ChannelMessageSend(channelID, message)
 	if err != nil {
