@@ -33,7 +33,8 @@ func helpHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		"📋 `/liststockpiles` - Affiche la liste des stockpiles du serveur avec leurs cooldowns.\n" +
 		"⏳ `/resetstockpile <nom>` - Réinitialise le cooldown d'un stockpile à 49 heures.\n" +
 		"🗑️ `/removestockpile <nom>` - Supprime un stockpile du serveur.\n" +
-		"ℹ️ `/help` - Affiche ce message d'aide avec toutes les commandes disponibles.\n"
+		"ℹ️ `/help` - Affiche ce message d'aide avec toutes les commandes disponibles.\n" +
+		"‼️ `/setcooldownchannel` - Définit le salon pour les alertes de cooldown.\n"
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
