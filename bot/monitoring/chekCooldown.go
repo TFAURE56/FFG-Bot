@@ -58,7 +58,10 @@ func alertCooldown(s *discordgo.Session, guildID string, sp json.Stockpiles, tim
 		return
 	}
 
-	message := fmt.Sprintf("⚠️ **Alerte Cooldown** ⚠️\nLe stockpile **%s** situé à **%s** sera bientôt perdu. \n Temps restant : %d", sp.Nom, sp.Hexa, timeRemaining/60)
+	hours := timeRemaining / 3600
+	minutes := (timeRemaining % 3600) / 60
+
+	message := fmt.Sprintf("⚠️ **Alerte Cooldown** ⚠️\nLe stockpile **%s** situé à **%s** sera bientôt perdu. \nTemps restant : %d heures et %d minutes", sp.Nom, sp.Hexa, hours, minutes)
 
 	_, err := s.ChannelMessageSend(channelID, message)
 	if err != nil {
