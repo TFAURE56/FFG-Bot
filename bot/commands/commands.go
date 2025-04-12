@@ -48,6 +48,7 @@ func RegisterAllCommands(s *discordgo.Session) {
 		RegisterResetStockpileCommand(s, guild.ID)
 		RegisterRemoveStockpileCommand(s, guild.ID)
 		RegisterHelpCommand(s, guild.ID)
+		RegisterWeatherCommand(s, guild.ID)
 		settings.RegisterSetCooldownChannelCommand(s, guild.ID)
 
 	}
