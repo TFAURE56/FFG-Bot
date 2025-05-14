@@ -36,7 +36,6 @@ func Start(token string) {
 		Activities: []*discordgo.Activity{
 			{
 				Type: discordgo.ActivityTypeGame,
-				Name: "la version 0.2.0",
 			},
 		},
 	})
