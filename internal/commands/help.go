@@ -1,26 +1,17 @@
 package commands
 
 import (
-	//"fmt"
-	"log"
-
 	"github.com/bwmarrin/discordgo"
 )
 
-func RegisterHelpCommand(s *discordgo.Session, guildID string) {
-	cmd := &discordgo.ApplicationCommand{
-		Name:        "help",
-		Description: "Affiche la liste des commandes disponibles et leurs descriptions",
-	}
-
-	_, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, cmd)
-	if err != nil {
-		log.Printf("❌ Impossible de créer la commande %s: %v", cmd.Name, err)
-	} else {
-		log.Printf("✅ Commande %s enregistrée avec succès", cmd.Name)
-	}
-
-	s.AddHandler(helpHandler)
+func init() {
+	Register(
+		&discordgo.ApplicationCommand{
+			Name:        "help",
+			Description: "Affiche la liste des commandes disponibles",
+		},
+		helpHandler,
+	)
 }
 
 func helpHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
