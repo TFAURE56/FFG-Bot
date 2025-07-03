@@ -1,7 +1,7 @@
 package commands
 
 import (
-	"FFG-Bot/json"
+	"FFG-Bot/internal/global"
 	"fmt"
 	"log"
 	"time"
@@ -9,31 +9,20 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-func RegisterResetStockpileCommand(s *discordgo.Session, guildID string) {
-	cmd := &discordgo.ApplicationCommand{
+func init() {
+	Register(&discordgo.ApplicationCommand{
 		Name:        "resetstockpile",
-		Description: "Remet le cooldown d'un stockpile à 49h",
+		Description: "Remet le cooldown d'un stockpile à 48h",
 		Options: []*discordgo.ApplicationCommandOption{
 			{
 				Type:         discordgo.ApplicationCommandOptionString,
 				Name:         "nom",
 				Description:  "Nom du stockpile à reset",
 				Required:     true,
-				Autocomplete: true, // Active l'autocomplétion
+				Autocomplete: true,
 			},
 		},
-	}
-
-	_, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, cmd)
-	if err != nil {
-		log.Printf("❌ Impossible de créer la commande %s: %v", cmd.Name, err)
-	} else {
-		log.Printf("✅ Commande %s enregistrée avec succès", cmd.Name)
-	}
-
-	// Ajout des handlers
-	s.AddHandler(resetStockpileHandler)
-	s.AddHandler(resetStockpileAutocomplete)
+	}, resetStockpileHandler)
 }
 
 // Autocomplétion pour afficher les stockpiles du serveur
@@ -46,23 +35,45 @@ func resetStockpileAutocomplete(s *discordgo.Session, i *discordgo.InteractionCr
 		return
 	}
 
-	stockpiles, err := json.GetStockpiles(i.GuildID)
-	if err != nil || len(stockpiles) == 0 {
+	db, err := global.ConnectToDatabase()
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Erreur de connexion à la base de données.",
+			},
+		})
 		return
 	}
+	defer db.Close()
 
-	var choices []*discordgo.ApplicationCommandOptionChoice
-	for _, sp := range stockpiles {
-		choices = append(choices, &discordgo.ApplicationCommandOptionChoice{
-			Name:  sp.Nom,
-			Value: sp.Nom,
+	rows, err := db.Query("SELECT name FROM stockpiles")
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Erreur lors de la récupération des stockpiles.",
+			},
 		})
+		return
+	}
+	defer rows.Close()
+
+	var options []*discordgo.ApplicationCommandOptionChoice
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err == nil {
+			options = append(options, &discordgo.ApplicationCommandOptionChoice{
+				Name:  name,
+				Value: name,
+			})
+		}
 	}
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionApplicationCommandAutocompleteResult, // ✅ Correction ici
+		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
 		Data: &discordgo.InteractionResponseData{
-			Choices: choices,
+			Choices: options,
 		},
 	})
 }
@@ -74,27 +85,24 @@ func resetStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 	}
 
 	nom := i.ApplicationCommandData().Options[0].StringValue()
-	stockpiles, err := json.GetStockpiles(i.GuildID)
-	if err != nil || len(stockpiles) == 0 {
+
+	db, err := global.ConnectToDatabase()
+	if err != nil {
+		log.Printf("❌ Erreur de connexion à la base de données : %v", err)
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
-				Content: "⚠️ Aucun stockpile trouvé pour ce serveur.",
+				Content: "❌ Erreur de connexion à la base de données.",
 			},
 		})
 		return
 	}
+	defer db.Close()
 
-	found := false
-	for idx, sp := range stockpiles {
-		if sp.Nom == nom {
-			stockpiles[idx].Cooldown = time.Now().Unix() + (49 * 3600)
-			found = true
-			break
-		}
-	}
-
-	if !found {
+	// Vérifier si le stockpile existe
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM stockpiles WHERE name = ?", nom).Scan(&count)
+	if err != nil || count == 0 {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
@@ -104,23 +112,24 @@ func resetStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 		return
 	}
 
-	// ✅ Correction : Utilisation de SaveStockpiles
-	err = json.SaveStockpiles(i.GuildID, stockpiles)
+	// Mettre à jour le cooldown à maintenant + 48h
+	newCooldown := time.Now().Add(48 * time.Hour).Format("2006-01-02 15:04:05")
+	_, err = db.Exec("UPDATE stockpiles SET cooldown = ? WHERE name = ?", newCooldown, nom)
 	if err != nil {
+		log.Printf("❌ Erreur lors du reset du cooldown : %v", err)
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
 			Data: &discordgo.InteractionResponseData{
 				Content: "❌ Erreur lors de la mise à jour du stockpile.",
 			},
 		})
-		log.Printf("Erreur lors du reset du stockpile : %v", err)
 		return
 	}
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
-			Content: fmt.Sprintf("🔄 Le cooldown du stockpile **%s** a été remis à **49 heures**.", nom),
+			Content: fmt.Sprintf("🔄 Le cooldown du stockpile **%s** a été remis à **48 heures**.", nom),
 		},
 	})
 }
