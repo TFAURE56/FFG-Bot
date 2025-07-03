@@ -1,16 +1,17 @@
 package commands
 
 import (
-	"FFG-Bot/json"
 	"fmt"
 	"log"
 	"time"
 
+	"FFG-Bot/internal/global"
+
 	"github.com/bwmarrin/discordgo"
 )
 
-func RegisterAddstockpileCommand(s *discordgo.Session, guildID string) {
-	cmd := &discordgo.ApplicationCommand{
+func init() {
+	Register(&discordgo.ApplicationCommand{
 		Name:        "addstockpile",
 		Description: "Ajoute un stockpile avec un nom, un hexagone et un code",
 		Options: []*discordgo.ApplicationCommandOption{
@@ -23,28 +24,20 @@ func RegisterAddstockpileCommand(s *discordgo.Session, guildID string) {
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "hexa",
-				Description: "Hexagone dans lequel se site le stockpile",
+				Description: "Hexagone du stockpile",
 				Required:    true,
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "code",
-				Description: "Code d'accès du stockpile",
+				Description: "Code d'accès au stockpile",
 				Required:    true,
 			},
 		},
-	}
-
-	_, err := s.ApplicationCommandCreate(s.State.User.ID, guildID, cmd)
-	if err != nil {
-		log.Printf("❌ Impossible de créer la commande %s: %v", cmd.Name, err)
-	} else {
-		log.Printf("✅ Commande %s enregistrée avec succès", cmd.Name)
-	}
-
-	s.AddHandler(addStockpileHandler)
+	}, addStockpileHandler)
 }
 
+// Ajout d'un stockpile en base de donnée
 func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.ApplicationCommandData().Name != "addstockpile" {
 		return
@@ -78,8 +71,26 @@ func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
-	// Ajout du stockpile dans le fichier JSON
-	err := json.AddStockpile(i.GuildID, nom, hexa, code, cooldown)
+	// Ajout du stockpile dans la base de données Mariadb
+	db, err := global.ConnectToDatabase()
+	log.Printf("Connexion à la base de données : %v", db)
+	if err != nil {
+		log.Printf("❌ Erreur de connexion à la base de données : %v", err)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Erreur de connexion à la base de données.",
+			},
+		})
+		return
+	}
+	// Calcul de la date d'expiration du cooldown (+48h)
+	cooldownExpiration := time.Now().Add(48 * time.Hour).Format("2006-01-02 15:04:05")
+
+	_, err = db.Exec(
+		"INSERT INTO stockpiles (name, hexa, code, cooldown) VALUES (?, ?, ?, ?)",
+		nom, hexa, code, cooldownExpiration,
+	)
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -90,6 +101,7 @@ func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		log.Printf("Erreur d'ajout du stockpile : %v", err)
 		return
 	}
+	defer db.Close()
 
 	// Réponse de confirmation
 	cooldownStr := time.Unix(cooldown, 0).Format("02/01/2006 15:04:05")

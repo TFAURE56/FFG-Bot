@@ -6,15 +6,14 @@ import (
 	"github.com/bwmarrin/discordgo"
 )
 
-// Fonction d'enregistrement de la commande ping
-func RegisterPingCommand(s *discordgo.Session, guildID string) {
-	cmd := &discordgo.ApplicationCommand{
-		Name:        "ping",
-		Description: "Affiche la latence du bot",
-	}
-
-	// Enregistrer la commande avec son handler
-	RegisterCommand(s, guildID, cmd, pingHandler)
+func init() {
+	Register(
+		&discordgo.ApplicationCommand{
+			Name:        "ping",
+			Description: "Affiche la latence du bot",
+		},
+		pingHandler,
+	)
 }
 
 // Handler pour la commande ping
