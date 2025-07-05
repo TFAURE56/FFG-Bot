@@ -39,6 +39,7 @@ func init() {
 
 // Ajout d'un stockpile en base de donnée
 func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
+
 	if i.ApplicationCommandData().Name != "addstockpile" {
 		return
 	}
@@ -57,8 +58,8 @@ func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		}
 	}
 
-	// Cooldown de 49 heures en timestamp UNIX
-	cooldown := time.Now().Unix() + (49 * 3600)
+	// Calcul de la date d'expiration du cooldown (+48h) en UTC
+	cooldownExpiration := time.Now().UTC().Add(48 * time.Hour)
 
 	// Vérification des valeurs obligatoires
 	if nom == "" || hexa == "" || code == "" {
@@ -73,7 +74,6 @@ func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	// Ajout du stockpile dans la base de données Mariadb
 	db, err := global.ConnectToDatabase()
-	log.Printf("Connexion à la base de données : %v", db)
 	if err != nil {
 		log.Printf("❌ Erreur de connexion à la base de données : %v", err)
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -84,12 +84,10 @@ func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		})
 		return
 	}
-	// Calcul de la date d'expiration du cooldown (+48h)
-	cooldownExpiration := time.Now().Add(48 * time.Hour).Format("2006-01-02 15:04:05")
 
 	_, err = db.Exec(
 		"INSERT INTO stockpiles (name, hexa, code, cooldown) VALUES (?, ?, ?, ?)",
-		nom, hexa, code, cooldownExpiration,
+		nom, hexa, code, cooldownExpiration.Format("2006-01-02 15:04:05"),
 	)
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
@@ -104,8 +102,10 @@ func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	defer db.Close()
 
 	// Réponse de confirmation
-	cooldownStr := time.Unix(cooldown, 0).Format("02/01/2006 15:04:05")
-	response := fmt.Sprintf("📦 Stockpile **%s** ajouté à **%s** avec le code `%s`.\n⏳ Cooldown jusqu'à **%s**.", nom, hexa, code, cooldownStr)
+	response := fmt.Sprintf(
+		"📦 Stockpile **%s** ajouté à **%s** avec le code `%s`.\n⏳ Cooldown jusqu'à **%s** (heure Paris).",
+		nom, hexa, code, cooldownExpiration.In(time.FixedZone("Europe/Paris", 2*60*60)).Format("02/01/2006 15:04:05"),
+	)
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,

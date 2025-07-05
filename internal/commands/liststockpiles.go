@@ -24,15 +24,18 @@ func listStockpilesHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 		return
 	}
 
-	// Changer le fuseau horaire
+	// Chargement du fuseau horaire pour la France (Europe/Paris)
 	loc, err := time.LoadLocation("Europe/Paris")
 	if err != nil {
-		log.Printf("�� Erreur lors du chargement du fuseau horaire : %v", err)
+		log.Printf("❌ Erreur lors du chargement du fuseau horaire : %v", err)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Erreur lors du chargement du fuseau horaire.",
+			},
+		})
 		return
 	}
-	time.Local = loc
-
-	// Récupération des stockpiles depuis la base de données
 
 	db, err := global.ConnectToDatabase()
 	if err != nil {
@@ -45,8 +48,6 @@ func listStockpilesHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 		})
 		return
 	}
-
-	log.Printf("Connexion à la base de données réussie : %v", db)
 
 	type Stockpile struct {
 		Nom      string
@@ -76,7 +77,13 @@ func listStockpilesHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 			log.Printf("❌ Erreur lors du scan d'un stockpile : %v", err)
 			continue
 		}
-		cooldownTime, err := time.Parse("2006-01-02 15:04:05", cooldownStr)
+
+		// Parse toujours en heure de Paris
+		cooldownTime, err := time.ParseInLocation("2006-01-02 15:04:05", cooldownStr, time.UTC)
+		if err != nil {
+			// Fallback RFC3339 si jamais tu as du ISO en base
+			cooldownTime, err = time.ParseInLocation(time.RFC3339, cooldownStr, loc)
+		}
 		if err != nil {
 			log.Printf("❌ Erreur lors du parsing du cooldown : %v", err)
 			sp.Cooldown = 0
@@ -93,14 +100,15 @@ func listStockpilesHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 
 	var response string
 	for _, sp := range stockpiles {
-		// Calcul du temps restant
+		expirationParis := time.Unix(sp.Cooldown, 0).In(loc).Format("02/01/2006 15:04:05")
 		cooldownStr := getTimeRemaining(sp.Cooldown)
 
-		response += fmt.Sprintf("# 📦 **%s**\n🗺️ Hexagone: %s\n🔑 Code: ||`%s`||\n⏳ Temps restant: %s\n\n",
-			sp.Nom, sp.Hexa, sp.Code, cooldownStr)
+		response += fmt.Sprintf(
+			"# 📦 **%s**\n🗺️ Hexagone: %s\n🔑 Code: ||`%s`||\n⏳ Temps restant: %s\n🕒 Expire le: %s (heure de Paris)\n\n",
+			sp.Nom, sp.Hexa, sp.Code, cooldownStr, expirationParis)
 	}
 
-	response += ("\n\n**Pour réinitialiser un stockpile, utilisez la commande `/resetstockpile <nom>`**")
+	response += ("\n**Pour réinitialiser un stockpile, utilisez la commande `/resetstockpile <nom>`**")
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -110,13 +118,13 @@ func listStockpilesHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 	})
 }
 
-// Retourne le temps restant avant expiration du cooldown
+// Retourne le temps restant avant expiration du cooldown en heure de Paris
 func getTimeRemaining(expiration int64) string {
-	now := time.Now().Unix()
-	remaining := expiration - now
+	now := time.Now().UTC().Unix()
 
+	remaining := expiration - now
 	if remaining <= 0 {
-		return "✅ Disponible !"
+		return "Stockpile potentiellement expiré."
 	}
 
 	hours := remaining / 3600
