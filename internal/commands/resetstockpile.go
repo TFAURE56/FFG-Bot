@@ -133,3 +133,24 @@ func resetStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate)
 		},
 	})
 }
+
+// Reset un stockpile depuis un bouton (MessageComponent)
+func ResetStockpileByButton(s *discordgo.Session, i *discordgo.InteractionCreate, name, hexa string) {
+	db, err := global.ConnectToDatabase()
+	if err != nil {
+		log.Printf("Erreur de connexion à la base de données: %v", err)
+		return
+	}
+	defer db.Close()
+
+	// Reset le cooldown à 48h
+	newCooldown := time.Now().Add(48 * time.Hour)
+	_, err = db.Exec("UPDATE stockpiles SET cooldown = ?, alerted = 0 WHERE name = ? AND hexa = ?", newCooldown, name, hexa)
+	if err != nil {
+		log.Printf("Erreur lors du reset du stockpile %s (hexa: %s): %v", name, hexa, err)
+	} else {
+		log.Printf("Stockpile %s (hexa: %s) reset par bouton.", name, hexa)
+	}
+
+	// Réponse à l'utilisateur (déjà faite dans main.go, donc optionnel ici)
+}
