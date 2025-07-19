@@ -39,6 +39,8 @@ func Start(dg *discordgo.Session) {
 	})
 
 	dg.AddHandler(resetStockpileAutocomplete)
+	dg.AddHandler(viewOrderAutocomplete)
+	//dg.AddHandler()
 
 	err := dg.Open()
 	if err != nil {
