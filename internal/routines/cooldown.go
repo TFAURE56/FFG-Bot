@@ -45,6 +45,7 @@ func getCooldowns(dg *discordgo.Session, db *sql.DB) {
 	var cooldownTime time.Time
 	var alerted int
 	for rows.Next() {
+
 		err := rows.Scan(&name, &hexa, &cooldownTime, &alerted)
 		if err != nil {
 			log.Printf("Erreur lors de la lecture des données: %v", err)

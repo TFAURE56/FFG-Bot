@@ -40,6 +40,7 @@ func Start(dg *discordgo.Session) {
 
 	dg.AddHandler(resetStockpileAutocomplete)
 	dg.AddHandler(viewOrderAutocomplete)
+	dg.AddHandler(getOrderElementAutocomplete)
 	//dg.AddHandler()
 
 	err := dg.Open()
