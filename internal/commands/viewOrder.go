@@ -114,7 +114,7 @@ func viewOrderHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 func formatOrderElements(elements []OrderElements) string {
 	if len(elements) == 0 {
-		return "Aucun élément associé à cette commande."
+		return "Aucun élément associé à cette commande.\nAjoutez-en avec **/addorderelement**."
 	}
 
 	// Formate les éléments de la commande en une chaîne de caractères
