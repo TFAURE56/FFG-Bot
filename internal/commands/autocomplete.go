@@ -2,11 +2,13 @@ package commands
 
 import (
 	"FFG-Bot/internal/global"
+	"log"
 	"strconv"
 
 	"github.com/bwmarrin/discordgo"
 )
 
+// Autocomplétion pour afficher les commandes de production
 func ViewOrderAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	choices := global.GetOrderIDsFromDB()
@@ -19,7 +21,7 @@ func ViewOrderAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate)
 	})
 }
 
-// Handler d'autocomplétion pour les deux options
+// Autocomplétion pour les deux options
 func GetOrderElementAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	if i.Type != discordgo.InteractionApplicationCommandAutocomplete {
 		return
@@ -72,4 +74,60 @@ func GetOrderElementAutocomplete(s *discordgo.Session, i *discordgo.InteractionC
 			},
 		})
 	}
+}
+
+// Autocomplétion pour afficher les stockpiles du serveur
+func NameStockpileAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	if i.Type != discordgo.InteractionApplicationCommandAutocomplete {
+		return
+	}
+
+	// Vérifier que la commande est bien /resetstockpile ou /removestockpile
+	if i.ApplicationCommandData().Name != "resetstockpile" && i.ApplicationCommandData().Name != "removestockpile" {
+		return
+	}
+
+	db, err := global.ConnectToDatabase()
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Erreur de connexion à la base de données.",
+			},
+		})
+		log.Println("Erreur de connexion à la base de données pour l'autocomplétion des stockpiles:", err)
+		return
+	}
+	defer db.Close()
+
+	rows, err := db.Query("SELECT name FROM stockpiles")
+	if err != nil {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Erreur lors de la récupération des stockpiles.",
+			},
+		})
+		log.Println("Erreur lors de la récupération des stockpiles:", err)
+		return
+	}
+	defer rows.Close()
+
+	var options []*discordgo.ApplicationCommandOptionChoice
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err == nil {
+			options = append(options, &discordgo.ApplicationCommandOptionChoice{
+				Name:  name,
+				Value: name,
+			})
+		}
+	}
+
+	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
+		Data: &discordgo.InteractionResponseData{
+			Choices: options,
+		},
+	})
 }

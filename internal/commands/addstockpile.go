@@ -85,6 +85,29 @@ func addStockpileHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	// Vérifier si le stockpile existe déjà
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM stockpiles WHERE name = ?", nom).Scan(&count)
+	if err != nil {
+		log.Printf("❌ Erreur lors de la vérification de l'existence du stockpile : %v", err)
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ Erreur lors de la vérification du stockpile.",
+			},
+		})
+		return
+	}
+	if count > 0 {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: fmt.Sprintf("❌ Le stockpile **%s** existe déjà.", nom),
+			},
+		})
+		return
+	}
+
 	_, err = db.Exec(
 		"INSERT INTO stockpiles (name, hexa, code, cooldown) VALUES (?, ?, ?, ?)",
 		nom, hexa, code, cooldownExpiration.Format("2006-01-02 15:04:05"),
