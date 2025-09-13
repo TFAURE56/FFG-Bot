@@ -89,7 +89,7 @@ func viewOrderHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 	orderDetails.Ressources = elements
 
 	// Transforme la date de livraison en format lisible
-	orderDetails.EndDateString = orderDetails.EndDate.Format("02/01/2006 15:04")
+	orderDetails.EndDateString = orderDetails.EndDate.Format("02/01/2006")
 
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -130,18 +130,6 @@ func formatOrderElements(elements []OrderElements) string {
 	}
 	return result
 
-}
-
-func viewOrderAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
-
-	choices := global.GetOrderIDsFromDB()
-
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-		Data: &discordgo.InteractionResponseData{
-			Choices: choices,
-		},
-	})
 }
 
 // OrderDetails structure to hold order information

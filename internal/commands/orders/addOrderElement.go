@@ -26,6 +26,22 @@ func init() {
 				Description:  "Ressource à ajouter à la commande",
 				Required:     true,
 				Autocomplete: false,
+				// Récupérer la liste des ressources depuis la base de données
+				Choices: func() []*discordgo.ApplicationCommandOptionChoice {
+					ressources, err := getRessourcesList()
+					if err != nil {
+						log.Printf("Erreur lors de la récupération des ressources : %v", err)
+						return []*discordgo.ApplicationCommandOptionChoice{}
+					}
+					choices := make([]*discordgo.ApplicationCommandOptionChoice, len(ressources))
+					for i, ressource := range ressources {
+						choices[i] = &discordgo.ApplicationCommandOptionChoice{
+							Name:  ressource,
+							Value: ressource,
+						}
+					}
+					return choices
+				}(),
 			},
 			{
 				Type:        discordgo.ApplicationCommandOptionInteger,
@@ -42,6 +58,18 @@ func addOrderElementHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 	var orderID int64
 	var ressource string
 	var quantite int64
+
+	// Si l'user a choisi une ressource non disponible, on bloque l'ajout
+	value := i.ApplicationCommandData().Options[1].StringValue()
+	if value != "" && len(value) >= 17 && value[len(value)-17:] == " (non disponible)" {
+		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+			Type: discordgo.InteractionResponseChannelMessageWithSource,
+			Data: &discordgo.InteractionResponseData{
+				Content: "❌ La ressource choisie n'est pas disponible à la commande.",
+			},
+		})
+		return
+	}
 
 	for _, opt := range i.ApplicationCommandData().Options {
 		switch opt.Name {
@@ -90,18 +118,33 @@ func addOrderElementHandler(s *discordgo.Session, i *discordgo.InteractionCreate
 	})
 }
 
-// Autocomplete pour les options de la commande
-func addOrderElementAutocomplete(s *discordgo.Session, i *discordgo.InteractionCreate) {
-	if i.Type != discordgo.InteractionApplicationCommandAutocomplete {
-		return
+// Fonction pour récupérer la liste des ressources dans la base de données
+func getRessourcesList() ([]string, error) {
+	db, err := global.ConnectToDatabase()
+	if err != nil {
+		return nil, err
 	}
+	defer db.Close()
 
-	choices := global.GetOrderIDsFromDB()
-	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-		Type: discordgo.InteractionApplicationCommandAutocompleteResult,
-		Data: &discordgo.InteractionResponseData{
-			Choices: choices,
-			Flags:   discordgo.MessageFlagsEphemeral,
-		},
-	})
+	rows, err := db.Query("SELECT name, enable FROM elements")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var ressources []string
+	for rows.Next() {
+		var name string
+		var enable int
+		err := rows.Scan(&name, &enable)
+		if err != nil {
+			return nil, err
+		}
+		// Si la ressource est activée, on l'ajoute à la liste
+		if enable == 1 {
+			ressources = append(ressources, name)
+		} else {
+			ressources = append(ressources, name+" (non disponible)")
+		}
+	}
+	return ressources, nil
 }

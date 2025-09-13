@@ -70,7 +70,7 @@ func getCooldowns(dg *discordgo.Session, db *sql.DB) {
 
 // Envoie un message d'alerte avec un timestamp Discord si cooldown < 2h
 func sendCooldownAlertTimestamp(name, hexa string, cooldownUnix int64, dg *discordgo.Session) {
-	const channelID = "1307259612755525696"
+	const channelID = "1408516389949669548"
 
 	message := fmt.Sprintf(
 		"⏰ Le stockpile **%s** (hexa: %s) expire <t:%d:R> (<t:%d:F>) !",

@@ -69,5 +69,5 @@ func viewOrderOnHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func formatOrderDetails(order OrderDetails) string {
-	return fmt.Sprintf("**Commande ID:** %s\n**Commentaire:** %s\n**Date de fin:** %s\n**Commandé par:** %s\n", order.ID, order.Comment, order.EndDate.Format("2006-01-02 15:04:05"), order.Orderer)
+	return fmt.Sprintf("# **Commande ID:** %s\n**Commentaire:** %s\n**Date de fin:** %s\n**Commandé par:** %s\n", order.ID, order.Comment, order.EndDate.Format("2006-01-02"), order.Orderer)
 }

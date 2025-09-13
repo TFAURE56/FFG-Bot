@@ -1,6 +1,7 @@
 package commands
 
 import (
+	_ "FFG-Bot/internal/commands/orders"
 	"fmt"
 	"log"
 	"os"
@@ -39,8 +40,8 @@ func Start(dg *discordgo.Session) {
 	})
 
 	dg.AddHandler(resetStockpileAutocomplete)
-	dg.AddHandler(viewOrderAutocomplete)
-	dg.AddHandler(getOrderElementAutocomplete)
+	dg.AddHandler(ViewOrderAutocomplete)
+	dg.AddHandler(GetOrderElementAutocomplete)
 	//dg.AddHandler()
 
 	err := dg.Open()

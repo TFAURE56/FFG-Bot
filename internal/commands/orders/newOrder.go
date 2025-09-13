@@ -26,7 +26,7 @@ func init() {
 			{
 				Type:        discordgo.ApplicationCommandOptionString,
 				Name:        "date_livraison",
-				Description: "Date de livraison de la commande (format JJ/MM/AAAA HH:MM)",
+				Description: "Date de livraison de la commande (format JJ/MM/AAAA)",
 				Required:    true,
 			},
 		},
@@ -73,7 +73,8 @@ func newOrderHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	log.Printf("Date de livraison avant conversion: %s", dateLivraison)
 
-	dateLivraisonFR, err := time.ParseInLocation("2006-01-02 15:04:05", dateLivraison, loc)
+	// Parse uniquement la date (sans heure)
+	dateLivraisonFR, err := time.ParseInLocation("2006-01-02", dateLivraison, loc)
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -84,11 +85,12 @@ func newOrderHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		return
 	}
 
+	// Stocke la date sans heure (format YYYY-MM-DD)
 	dateLivraisonUTC := dateLivraisonFR.UTC()
 
 	log.Printf("Nouvelle commande de %s : %s, date de livraison : %s", orderer, description, dateLivraisonUTC)
 
-	_, err = db.Exec("INSERT INTO orders (comment, orderer, end_date, working) VALUES (?, ?, ?, ?)", description, orderer, dateLivraisonUTC, "on")
+	_, err = db.Exec("INSERT INTO orders (comment, orderer, end_date, working) VALUES (?, ?, ?, ?)", description, orderer, dateLivraisonUTC.Format("2006-01-02"), "on")
 	if err != nil {
 		s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 			Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -116,7 +118,7 @@ func newOrderHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 
 	response := "**ID de la commande :** " + strconv.FormatInt(orderID, 10) + "\n" +
 		"**Description :** " + description + "\n" +
-		"**Date de livraison :** " + dateLivraison
+		"**Date de livraison :** " + dateLivraisonFR.Format("02/01/2006")
 	s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 		Type: discordgo.InteractionResponseChannelMessageWithSource,
 		Data: &discordgo.InteractionResponseData{
@@ -127,15 +129,11 @@ func newOrderHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 }
 
 func reorganizeDate(date string) string {
-	// Supposons que la date soit au format "DD/MM/YYYY HH:MM"
-	// On la réorganise au format "YYYY-MM-DD HH:MM:SS"
+	// Supposons que la date soit au format "DD/MM/YYYY" ou "DD/MM/YYYY HH:MM"
 	parts := strings.Split(date, " ")
-	if len(parts) != 2 {
-		return date // Retourne la date originale si le format n'est pas correct
-	}
 	dateParts := strings.Split(parts[0], "/")
 	if len(dateParts) != 3 {
 		return date // Retourne la date originale si le format n'est pas correct
 	}
-	return fmt.Sprintf("%s-%s-%s %s:00", dateParts[2], dateParts[1], dateParts[0], parts[1])
+	return fmt.Sprintf("%s-%s-%s", dateParts[2], dateParts[1], dateParts[0])
 }
