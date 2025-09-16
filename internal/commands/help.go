@@ -31,6 +31,7 @@ func helpHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		"📄 `/vieworder <order id>` - Affiche les informations d'un order spécifique.\n" +
 		"➕ `/addorderelement <order id> <élément> <quantitée>` - Ajoute un élément à un order existant.\n" +
 		"⤵️ `/getorderelement <order id> <élément>` - Vous assigne a un élément d'un order existant.\n" +
+		"❔ `/viewlements` - Affiche les elements disponible a la commande.\n" +
 
 		"\nℹ️ `/help` - Affiche ce message d'aide avec toutes les commandes disponibles.\n"
 
