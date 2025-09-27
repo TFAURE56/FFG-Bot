@@ -42,5 +42,3 @@ func helpHandler(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		},
 	})
 }
-
-//"‼️ `/setcooldownchannel` - Définit le salon pour les alertes de cooldown.\n"
